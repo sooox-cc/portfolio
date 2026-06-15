@@ -1,0 +1,183 @@
+---
+title: "Edge AI IDS on Microcontrollers"
+description: "Benchmarking 11 ML and deep learning models for IoT intrusion detection deployed directly on physical MCU hardware."
+date: 2026-05-31
+tags: ["Python", "Machine Learning", "TinyML", "IoT", "Cybersecurity", "Embedded", "Research"]
+draft: false
+---
+
+(master thesis paper summary)
+
+The core question: 
+can you run a real intrusion detection system (IDS) directly on a microcontroller, and if so, 
+what model would you actually deploy?
+
+## The problem with existing IDS research
+
+Most previous research done was kinda useless, two main inaccuracies kept showing up:
+- Models are evaluated on servers or by simulating a "resource constrained environment", 
+  making their numbers worthless (imo)
+- One of the first things you learn in machine learning is that you should balance your data to get 
+  accurate results, but somehow most of the previous work used class-imbalance and then used 
+  accuracy as their primary metric, this artifically inflates performance on the majority 
+  classees and hides misclassifications on less common attacks
+
+The majority of previous work only does binary classification (attack vs benign traffic)
+
+We fixed these problems.
+
+## What we did
+
+We trained using 11 algorithms, actually deployed on 3 different MCUs, 
+used a balanced dataset, and gathered actual on-device inference times.
+
+**Dataset:** Edge-IIoTset, originally 2.2M rows, 15 classes. 
+We grouped the 14 attack classes into 5 macro-categories by similarity, 
+downsampled to 25,000 samples per class (125k total)
+
+**Preprocessing:** Removed temporally and instance-specific features to prevent leakage, 
+deduplicated, label-encoded, MinMax-scaled
+
+**Hard constraints:** model size &lt;256KB, inference time &lt;10ms.
+
+**Training hardware:** RTX 4090, 36GB RAM
+
+
+**The boards:**
+
+| Board | MCU | Clock | Flash | SRAM |
+|---|---|---|---|---|
+| M5StickC Plus2 | ESP32-PICO-V3-02 | 240 MHz | 8 MB | 520 KB |
+| ESP32 Huzzah | ESP32-WROOM-32E | 240 MHz | 4 MB | 520 KB |
+| Arduino Nano 33 BLE | ARM Cortex-M4F | 64 MHz | 1 MB | 256 KB |
+
+**Models:**
+- Classical ML: Decision Tree, Random Forest, Extra Trees, Naive Bayes, XGBoost, LightGBM
+- Deep Learning: ANN, CNN, CNN with SE, CNN with CBAM, Depthwise CNN
+
+Classical models were tuned using grid searches, NNs were quantized from `float32` to `int8`, 
+first using Post Traning Quantization (PTQ) 
+but later switching to Quantization-Aware Training as we ran into some issues
+
+**Deployment pipeline:** train on workstation → export as C header → flash via PlatformIO 
+→ stream testset and collect predictions and inference times over serial using a python script
+
+## Model architectures
+
+**ANN:** Four hidden layers (32→64→64→128) 
+The narrow first layer forces the network to pick out the most important relationships 
+from 46 input features before expanding. Dropout at 30% after the last two layers.
+
+**CNN variants:** All built around the same two-stage Conv1D backbone: 
+8 filters, kernel size 3, Batch Norm, ReLU, MaxPooling. 
+The 256KB constraint is what locked us to 8 filters per layer. 
+That decision ends up being the whole story for why the CNNs underperform (compared to tree based models).
+
+The attention variants add their blocks after batch norm in each stage:
+- **SE:** channel attention only:
+squeeze spatially, reweight channels through a small MLP
+- **CBAM:** channel attention (like SE) + spatial attention on top, 
+using a Conv1D layer over concatenated average and max pooled channels.
+We added this because it had never been done before
+- **Depthwise:** replaces standard convolutions with depthwise separable ones, lower param count
+
+All CNN variants trained 100 epochs
+
+## Results
+
+Decision Tree won on every board.
+
+| Algorithm | F2 | Nano Acc | Nano Inf (μs) | Nano E (μJ) | M5Stick Acc | M5Stick Inf (μs) | M5Stick E (μJ) | Huzzah Acc | Huzzah Inf (μs) | Huzzah E (μJ) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Decision Tree | 0.949 | 95.0% | 21.4 | 0.23 | 95.2% | 16.5 | 1.63 | 95.8% | 10.2 | 1.01 |
+| LightGBM | 0.938 | 93.8% | 691.7 | 7.47 | 94.0% | 1013.0 | 100.29 | 94.0% | 1007.7 | 99.76 |
+| XGBoost | 0.937 | 93.7% | 722.8 | 7.81 | 93.7% | 826.1 | 81.78 | 94.0% | 860.8 | 85.22 |
+| Random Forest | 0.882 | 88.5% | 111.1 | 1.20 | 89.2% | 66.2 | 6.55 | 89.2% | 74.1 | 7.34 |
+| Extra Trees | 0.792 | 81.7% | 137.6 | 1.49 | 81.7% | 69.1 | 6.84 | 81.7% | 76.3 | 7.55 |
+| Naive Bayes | 0.709 | 71.9% | 6189.3 | 66.84 | 73.8% | 372.3 | 36.86 | 73.8% | 356.0 | 35.24 |
+| ANN | 0.674 | 68.6% | 625.6 | 6.76 | 70.2% | 520.0 | 51.48 | 69.9% | 494.8 | 48.99 |
+| CNN | 0.792 | 79.9% | 30144.8 | 325.56 | 78.5% | 1818.0 | 179.98 | 79.0% | 1642.3 | 162.59 |
+| CNN-SE | 0.793 | 80.0% | 37671.5 | 406.85 | 80.8% | 4864.5 | 481.59 | 80.8% | 4705.5 | 465.84 |
+| CNN-CBAM | 0.797 | 80.4% | 47124.5 | 508.94 | 81.0% | 9111.3 | 902.02 | 81.0% | 10047.6 | 994.71 |
+| Depthwise CNN | 0.726 | 73.5% | 2860.2 | 30.89 | 75.0% | 1363.3 | 134.97 | 75.0% | 1357.7 | 134.41 |
+
+Decision Tree: highest accuracy, fastest inference, lowest energy. Not even close.
+
+We use F2-score (β=2) over F1 because missed attacks are more costly than false alarms —>
+it weights recall higher than precision. This is very important in the field of cyber security,
+but many previous work seems to ignore this.
+
+## Why Decision Tree and not XGBoost or Random Forest?
+
+XGBoost and LightGBM are genuinely competitive on classification (F2 ~0.937–0.939) 
+but their sequential boosting structure makes inference 80–100× slower than a single tree. 
+For real-time network traffic that's a problem.
+
+Random Forest hits the 256KB size limit before it can grow deep enough to make fine splits. 
+Decision Tree fits in 76KB at 95.8% accuracy.
+
+Extra Trees consistently underperformed Random Forest by 7–9 percentage points across all boards.
+Random threshold selection isn't doing it any favors under these constraints.
+
+## Neural networks on MCUs
+
+They struggled. All four CNN variants fell below every tree-based model on classification performance.
+
+CNN with CBAM is technically interesting it's the first deployment of a 
+1D CNN with a CBAM attention block on actual MCU hardware. 
+The attention mechanism measurably improved accuracy over plain CNN by 2–2.5 percentage points. 
+CNN-SE got within 0.2 points of CBAM at roughly half the inference cost 
+(4864.5μs vs 9111.3μs on the M5Stick), 
+which makes it the better trade-off if you actually need attention. 
+But both cost 550–900× the energy of the Decision Tree for worse classification.
+
+Depthwise CNN had the fastest CNN inference (~1360μs) but the weakest CNN classification. 
+
+ANN consistently ranked worst overall at 68.6–70.2% accuracy, right below Naive Bayes.
+
+## How we compare to related work
+
+| Study | Model | Dataset | Hardware | Classes | Acc. | Latency |
+|---|---|---|---|---|---|---|
+| Manocchio et al. (2022) | Decision Tree | BoT-IoT, ToN-IoT, MQTT | ESP32 | 2 | 99.92% | 0.89 μs |
+| Selvaraj et al. (2025) | Q-CNN + Autoencoder | Edge-IIoTset | Arduino Nano 33 BLE Sense | 7 | 94.3% | ~12000 μs |
+| Our work | CNN-CBAM | Edge-IIoTset | ESP32 Huzzah | 5 | 81% | 9111.3 μs |
+| Our work | Decision Tree | Edge-IIoTset | ESP32 Huzzah | 5 | 95.8% | 10.2 μs |
+
+Manocchio's 99.92% is binary classification on a simpler dataset.
+Selvaraj evaluated their 7-class model on a more capable sensor board, with 12ms inference.
+Our Decision Tree hits 95.8% at 10.2μs on a standard ESP32 doing 5-class.
+
+## Takeaway
+
+If you're building an IDS for IoT edge devices: use a Decision Tree. 
+Neural networks didnt really fit within our constraints.
+
+The assumption that "more parameters = better"
+breaks down completely under MCU constraints.
+The literature mostly misses this because they benchmark on servers.
+We deployed on actual hardware, under real resource constraints, on a balanced dataset,
+and the answer is pretty clear. (we mogged them)
+
+Tree-based classifiers beat neural architectures on accuracy, inference time, and energy consumption. 
+There's no tradeoff here, the Decision Tree just wins.
+
+## Limitations and future work
+
+**Energy measurement** 
+We estimated energy per inference as E = P · t,
+where P comes from datasheet current values and supply voltage rather than measured current draw.
+It's alright for an approximation but not exactly accurate, this was a skill issue,
+electricity is magic to me
+
+**Only one dataset.** 
+Everything was trained and evaluated on Edge-IIoTset. 
+It would be very interesting to test on other datasets as well, 
+this way we could detect Dataset-specific biases.
+
+**Only three boards.** 
+We just trained on what we had, resulting in two of our 3 boards being nearly identical (hardware-wise)  
+
+**The neural network angle isn't dead.** 
+We could add a hybrid approach that adds a small NN for anomly detection as a first stage, 
+then let the DT perform classification.
