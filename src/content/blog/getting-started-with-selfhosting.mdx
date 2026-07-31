@@ -1,0 +1,115 @@
+---
+title: "Getting started with Self-Hosting"
+description: "a guide to self-hosting and data ownership"
+date: 2026-07-31
+tags: ["Hosting", "Server", "Proxy", "Pangolin", "Tailscale", "FOSS", "Beginners"]
+draft: false
+---
+import networkTopology from '../../assets/blog/self_hosting_topology.svg?url'
+
+Everything used is Free and Open Source Software (FOSS), the only things you may pay for are a VPS and a domain, but these are optional.
+
+## Why
+- Data ownership: **Your** data, on **your** hardware, under **your** rules
+- Security: smaller attack surface, trust yourself, not some corporation
+- Privacy: no telemetry, no selling your data
+- No ads: need I say more?
+- Learning: understand networking, linux/unix/cli/hosting/...
+- Cost: homelab hardware can pay for itself if you no longer have to pay subscriptions
+
+## Two options
+
+Earlier I mentioned that paying for a VPS and domain is optional, I will be going in-depth here of what your options are, you may not have to spend any money.
+
+### Option 1: Tailscale (free, private*)
+`* it does connect to tailscale servers but traffic is encrypted`
+
+[Tailscale](https://tailscale.com/) creates a private network ("tailnet") between your devices using [WireGuard](https://www.wireguard.com/). You install it on your server and phone/laptop, and your devices can connect to each other outside of your local network without needing port-forwarding or buying a domain.
+
+Tailscale can also create HTTPS URLs for your services, these work for devices that are connected to your tailnet.
+
+**+:** you can securely access your services from any device connected to the tailnet, for free
+**-:** if you want to share your service with anyone they will have to join your tailnet
+
+### Option 2: Pangolin + VPS + domain
+
+If you want your service to be reachable by anyone, from any device, at a URL like `immich.yourdomain.com`, you may have to spend some money on a small VPS and a domain.
+
+The VPS will run two things:
+
+1. [Pangolin](https://pangolin.net/): an open-source, self-hostable alternative to cloudflare tunnels, built on WireGuard and Traefik. It creates an encrypted tunnel between your VPS and your home server, so you never open a port on your network. You create a "site" (your server), point your domain at your vps, and add "resources" (subdomains). Pangolin also handles access control per-resource: you can require auth, a PIN code, a specific device, an IP range, a country, ... before anyone can access your resource
+2. [WireGuard](https://www.wireguard.com/): since you are already paying for a VPS, why not also use it to host a VPN **you control**, this way you wont have to pay for a commercial VPN as well
+
+**+:** it is very easy and secure to share your services publicly under your own domain
+**-:** you will have to pay for a domain (>10$ yearly) and a VPS (>5$ monthly)
+
+> You can also run both options at once, this is what I do
+
+something like this:
+<img src={networkTopology} alt="Network diagram" />
+
+## Hardware
+
+You can use anything: from an old laptop or office desktop to a rack server. I personally have an increadibly overkill server for anything I am doing (2x24 core CPU, 24x32GB RAM), everything depends on what exactly you are hosting.
+
+## Storage & RAID
+
+RAID can protect against data loss on drive failure while the server is running **It is not a backup**. 
+
+- RAID 0: do not use this for any data you would miss if it were lost. One dead drive = everything gone.
+- RAID 1 (mirroring, 2 drives): Halves usable capacity, data survives if one drive were to fail.
+- RAID 5 (parity, 3+ drives): more efficient, capacity-wise, but on large drives rebuilding can take a long time.
+- RAID 10 (mirror + stripe, 4+ drives): better performance, safer rebuilds than RAID 5, at the cost of half your capacity. A solid step up once you outgrow a single mirror.
+
+Whatever you pick, it doesn't replace backups. More on that below.
+
+## Virtualization: Proxmox, Docker, or both
+
+I run [Proxmox](https://www.proxmox.com/) on bare metal and split services between:
+
+- LXCs (containers): lightweight, fast, share the host kernel. Good for most single-purpose services.
+- VMs: full isolation, needed when something wants its own kernel, GPU passthrough, or you don't trust it sharing the host.
+
+I usually also run services using docker compose, for this I often use a single LXC running these containers
+
+**Tips for Proxmox users:** 
+
+- [community-scripts.org](https://community-scripts.org) (tteck's Proxmox VE Helper-Scripts) has one-line install scripts for a lot of commonly self-hosted apps, you run a single command to run a pre-configured LXC for whatever service you are trying to run.
+- **never blindly run a command from anywhere**, make sure its safe
+- try to use unprivileged LXCs by defauly, unless absolutely required
+- create snapshots of your VMs/LXCs
+- look into Proxmox Backup Servers
+- monitor uptime/health so you find out a service is down before your friends have to tell you
+
+## Backups
+
+Cloud services handle this for you, so you will have to handle this yourself. 
+
+The standard is the **3-2-1 backup strategy** where you keep 3 copies of your data, on 2 different types of media, with 1 copy stored offsite (this could be a copy on a hard drive at your friend's house)
+
+## Security basics
+
+- Do not port forward: Tailscale and/or Pangolin can do that for you
+- Unique passwords everywhere: use a password manager, I use Bitwarden or Vaultwarden (FOSS Bitwarden alternative, compatible with the Bitwarden browser extension and self-hosted)
+- MFA/2FA everywhere: there are multiple ways to authenticate yourself: something you know (password), something you have (authenticator code), or something you are (biometrics), use a combination of these
+
+## Getting you started
+
+Here are some of the services I personally host for data ownership, privacy, security, user experience, saving money, ...
+
+| Instead of... | Self-host... | Why |
+|---|---|---|
+| Google Photos | [Immich](https://immich.app/) | how does google make money again? |
+| Dropbox / OneDrive | [Nextcloud](https://nextcloud.com/) | own your data |
+| Discord (partially) | [Matrix](https://matrix.org/) + [Element](https://element.io/) (+ a Discord bridge like OOYE) | encrypted, no ID verification |
+| Pocket | [Readeck](https://readeck.org/) | own your bookmarks |
+| Netflix-style media library | [Jellyfin](https://jellyfin.org/) + the Arr-suite (🏴‍☠️) | own your linux ISOs |
+| Reddit frontend | [Redlib](https://github.com/redlib-org/redlib) | no ads, no accounts, ... |
+| YouTube frontend | [Invidious](https://invidious.io/) | no ads, no accounts, ... |
+| Google Search | [SearXNG](https://docs.searxng.org/) | you actually find what you search for, no LLM |
+| Bitwarden (cloud) | [Vaultwarden](https://github.com/dani-garcia/vaultwarden) | idk for fun? |
+| Cloudflare Tunnel | [Pangolin](https://pangolin.net/) | cloudflare already controls more than enough |
+| A commercial VPN | [WireGuard](https://www.wireguard.com/) | control, actual "no logs" |
+| Overleaf (cloud) | [Overleaf Community Edition](https://docs.overleaf.com/on-premises) (self-hosted) | i put this here because i needed it for academic research |
+
+Every single thing in that right-hand column, plus Proxmox, Tailscale, and Docker, is free and open-source.
