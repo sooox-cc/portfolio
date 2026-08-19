@@ -457,19 +457,22 @@ import ProjectCard from '../components/ProjectCard.astro'
         <h2 class="text-2xl font-bold text-zinc-900 dark:text-white mb-8 text-center">Contact</h2>
 
         <div class="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
-          <a
-            href="mailto:sooox@cocaine.ninja"
-            class="flex-1 flex items-center gap-4 p-5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors group"
+          <button
+            type="button"
+            data-session-id="058458993b93f8c9f3e51f4a45f4d3ea14387da27f4b0c5fd62d1b8dab9bb53f69"
+            onclick="navigator.clipboard.writeText(this.dataset.sessionId); const l=this.querySelector('[data-copy-label]'); const orig=l.textContent; l.textContent='Copied!'; setTimeout(() => l.textContent = orig, 1500);"
+            class="flex-1 flex items-center gap-4 p-5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors group text-left"
           >
             <div class="shrink-0 h-9 w-9 flex items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-700 group-hover:border-zinc-400 dark:group-hover:border-zinc-500 transition-colors">
-              <svg class="h-4 w-4 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24">
+	              <path d="M0 0h24v24H0z" fill="none" />
+	              <path fill="#9f9fa9" d="m19.431 12.193l-4.53-2.51h3.071a4.847 4.847 0 0 0 4.842-4.841A4.85 4.85 0 0 0 17.972 0H7.252a6.073 6.073 0 0 0-6.066 6.066a6.57 6.57 0 0 0 3.383 5.741l4.53 2.51H6.028a4.847 4.847 0 0 0-4.842 4.841A4.85 4.85 0 0 0 6.028 24h10.72a6.073 6.073 0 0 0 6.066-6.066a6.57 6.57 0 0 0-3.383-5.741m-14.136-1.7a5.07 5.07 0 0 1-2.607-4.309C2.627 3.61 4.79 1.5 7.367 1.5h10.508c1.797 0 3.345 1.378 3.434 3.173a3.345 3.345 0 0 1-3.337 3.51H11.92a.67.67 0 0 0-.67.67l-.001 4.94zM16.633 22.5H6.124c-1.797 0-3.345-1.378-3.434-3.173a3.345 3.345 0 0 1 3.337-3.51h6.053c.37 0 .67-.3.67-.67v-4.94l5.954 3.3a5.07 5.07 0 0 1 2.608 4.309c.06 2.575-2.103 4.684-4.679 4.684" />
               </svg>
-            </div>
+             </div>
             <div>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-0.5">Email</p>
+              <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-0.5" data-copy-label>Session</p>
             </div>
-          </a>
+          </button>
 
           <a
             href="https://matrix.to/#/@sooox:matrix.privacymatters.cc"
