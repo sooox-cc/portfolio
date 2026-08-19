@@ -1,0 +1,76 @@
+---
+title: "AI-Powered Weed Detection System"
+description: "YOLOv8-based weed detection pipeline that turns drone GeoTIFs into geolocated heatmaps for farmers."
+date: 2026-02-25
+tags: ["Python", "YOLOv8", "Flask", "Rasterio", "GeoPandas", "Computer Vision", "Machine Learning"]
+draft: false
+---
+
+Team project to help farmers monitor weed infestations in their fields. The system processes drone imagery and turns detections into interactive geospatial heatmaps. My part was the AI detection system and the pixel-to-geo coordinate transformation pipeline.
+
+## Pipeline
+
+1. Drone captures (GEO)TIFF images of the field
+2. Custom YOLOv8 model detects weeds, returns pixel bounding boxes
+3. Center point of each box calculated
+4. Pixel coordinates transformed into real geographical coordinates using the GeoTIFF's embedded transform metadata
+5. Output written as GeoJSON for mapping
+
+```python
+def process_image(tmp_file_path, detection_model, datum, street, city, waypoint):
+    with rasterio.open(tmp_file_path) as geotiff:
+        transform = geotiff.transform
+
+        with Image.open(tmp_file_path) as pil_image:
+            result = get_prediction(tmp_file_path, detection_model)
+
+        geographic_coordinates_centers = []
+
+        for obj_pred in result.object_prediction_list:
+            bbox = obj_pred.bbox.to_voc_bbox()
+            center_x, center_y = (bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2
+            x_geo, y_geo = transform * (center_x, center_y)
+            geographic_coordinates_centers.append([round(x_geo, 5), round(y_geo, 5)])
+```
+
+Rasterio's affine transform does the heavy lifting: multiply pixel coords by the GeoTIFF's transform and out come real-world lon/lat.
+
+## Output
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [{
+    "type": "Feature",
+    "properties": {
+      "name": "<weed species>",
+      "date": "<capture date>",
+      "waypoint": "2"
+    },
+    "geometry": {
+      "type": "MultiPoint",
+      "coordinates": [
+        ["<lon>", "<lat>"],
+        ["<lon>", "<lat>"]
+      ]
+    }
+  }]
+}
+```
+
+(species, date, and coordinates redacted)
+
+GeoJSON output drops straight into the team's web app for heatmap rendering and field visualization.
+
+## Rest of the system
+
+I focused on detection and coordinate transformation. The rest of the team built:
+- Flask REST API for batch GeoTIFF uploads
+- Heatmap generation and field management UI
+- Data storage layer
+
+The API accepts batches of GeoTIFFs, runs each through the detection + transform pipeline, and returns aggregated GeoJSON — tested by uploading 5 files via Postman and confirming full pipeline output.
+
+## Biggest challenge
+
+Getting pixel-to-geographic coordinate transformation right. GeoTIFF metadata encodes an affine transform per image; get the order of operations wrong and your weed markers end up in the wrong field entirely. Rasterio + GeoPandas handled the actual math once the pipeline order was correct.

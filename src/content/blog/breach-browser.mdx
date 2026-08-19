@@ -1,0 +1,47 @@
+---
+title: "Breach Browser"
+description: "A full-text search engine for large text datasets, built on Elasticsearch, Flask, and resume-capable batch indexing."
+date: 2026-02-26
+tags: ["Python", "Elasticsearch", "Flask", "Docker", "OSINT"]
+draft: false
+---
+
+Breach Browser is a full-text search engine for large text datasets — useful for breach analysis, digital forensics, or just searching through huge document dumps. Python + Elasticsearch + Flask, with a clean web interface.
+
+[View on GitHub →](https://github.com/sooox-cc/breach-browser)
+
+## Query syntax
+
+Elasticsearch's query DSL exposed through a simple search bar:
+
+```
+term1 AND term2      # both terms
+"exact phrase"        # exact match
+test*                 # wildcard
+term~                 # fuzzy match (typo tolerance)
+term1 OR term2        # either term
+NOT term               # exclusion
+```
+
+## Architecture
+
+- **Elasticsearch** — indexing and search
+- **Flask** — HTTP layer
+- **Document processor** — chunks large files (500KB default) before indexing so memory use stays flat regardless of source file size
+- **Indexing manager** — batches documents (5 per batch by default), tracks progress, and can resume interrupted indexing runs
+- **Query parser** — translates the simplified search syntax into Elasticsearch queries
+
+## Why chunking and resumability mattered
+
+Breach datasets can be huge — gigabytes of text across thousands of files. Two problems came up immediately:
+
+1. **Memory** — loading whole files before indexing doesn't scale. Fixed with configurable chunked processing.
+2. **Indexing failures mid-run** — a multi-hour index job dying at hour 3 shouldn't mean starting over. Solved with persisted progress state so indexing resumes from the last completed batch instead of the beginning.
+
+## Deployment
+
+Runs via Docker — Elasticsearch 7.17.9 with tuned JVM heap settings and persistent volumes. Security is disabled by default for local/offline analysis use; documented steps exist to re-enable auth and TLS for anything exposed to a network.
+
+## Use cases
+
+Breach analysis, incident response, log analysis, and searching large document collections in general — anywhere grep stops being practical.

@@ -1,0 +1,47 @@
+---
+title: "PrivacyMatters Blog"
+description: "A privacy-focused blogging platform with PGP-enabled profiles, built on Laravel + Livewire + Alpine. v1, now retired."
+date: 2026-02-24
+tags: ["Laravel", "Livewire", "Alpine.js", "TailwindCSS", "NGINX", "SQLite", "Privacy"]
+draft: false
+---
+
+PrivacyMatters Blog is a community platform for privacy and digital-security content — part blog, part resource library, part glossary. Built on the TALL stack (TailwindCSS, Alpine.js, Laravel, Livewire).
+
+> This was v1. It's no longer live. A v2 rewrite is in progress but development has stalled — the repo has sat inactive for about a year.
+
+## Features
+
+- Markdown-based blogging with GitHub-flavored markdown editor + helper
+- Resource library for privacy tools/services, with file uploads
+- Interactive glossary of privacy and security terms
+- Comments and community discussion
+- Role-based access control (Admin/User) with a content moderation queue
+- Advanced search and filtering
+- User profiles with PGP public key storage for secure contact
+
+## Data model
+
+- `Post` belongsTo `User`, hasMany `Comment`, belongsTo `Category`, belongsToMany `Tag`
+- `User` hasMany `Post`, `Comment`
+- `Resource` belongsTo `User`, hasMany `File`, belongsTo `Category`, belongsToMany `Tag`
+
+## Interactive bits (Livewire + Alpine)
+
+- Dynamic dark/light theme switcher
+- Drag-and-drop file upload
+- Real-time comment updates without full page reloads
+- Modal-based moderation interface for admins
+
+## Deployment
+
+Runs behind a production NGINX config with security headers, fronted by a Cloudflare Tunnel (Zero Trust — no exposed ports), on the latest PHP with PHP-FPM.
+
+## What I'd change
+
+- More test coverage — TALL stack apps are easy to under-test since Livewire handles so much client interaction
+- More Form Objects instead of validating inline in controllers
+- More Laravel Echo for real-time features beyond comments
+- Mobile-first pass — it was built desktop-first and it shows
+
+These are the exact reasons v2 exists, though it's currently on hold.

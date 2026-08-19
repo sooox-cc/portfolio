@@ -1,0 +1,46 @@
+---
+title: "Domain Availability Checker"
+description: "A Python tool that mines the NLTK words corpus for available, brandable domain names via WHOIS."
+date: 2026-02-23
+tags: ["Python", "NLTK", "WHOIS", "Automation", "Data Mining"]
+draft: false
+---
+
+A Python tool that analyzes the NLTK words corpus, generates candidate domain names through word splitting, and checks availability across multiple TLDs via WHOIS.
+
+[View on GitHub →](https://github.com/sooox-cc/domainchecker)
+
+## How it works
+
+1. Load the NLTK words corpus
+2. Analyze each word for meaningful split points (syllable-aware, so splits stay pronounceable)
+3. Generate domain candidates from the resulting combinations
+4. Query WHOIS for each candidate across selected TLDs
+5. Categorize results: available, unavailable, error, pending
+
+## Why WHOIS querying needed care
+
+Different WHOIS servers have different rate limits, response formats, and blocking behavior — hammer one too fast and you get IP-blocked mid-run. So:
+
+- Configurable delay between requests (1s default)
+- Exponential backoff when a server starts showing rate-limit signs
+- Automatic failover across multiple WHOIS servers
+- Persisted progress so a run of thousands of candidate domains can resume after an interruption instead of restarting
+
+## Filtering for quality
+
+Not every word split makes a usable domain. Filtering considers:
+
+- Pronounceability
+- Reasonable length
+- Valid domain character set
+- Deduplication
+- A blacklist for inappropriate combinations
+
+## Output
+
+Results export as JSON, CSV, or a plain-text summary, plus detailed logs for debugging long runs.
+
+## What's next
+
+Registrar API integration for one-click registration, and a web UI instead of CLI-only operation.

@@ -6,19 +6,40 @@ tags: ["Python", "Streamlit", "PGPy", "cryptography", "privacy"]
 draft: false
 ---
 
-PGP Verification implements a second-factor authentication flow using cryptographic challenge-response with PGP keys.
+PGP Verification is a proof-of-concept identity verification system using a PGP challenge-response protocol — proving who you are without KYC, email, or phone number.
 
-> Full write-up coming soon.
+[Live demo →](https://pgp-verification.streamlit.app/) · [View on GitHub →](https://github.com/sooox-cc/PGP-Verification)
 
-## Key features
+## How it works
 
-- No email, phone, or KYC required
-- Challenge is signed with a known public key
-- Response verified server-side using PGPy
-- Simple Streamlit UI for rapid deployment
+1. **Key registration** — user submits their PGP public key
+2. **Challenge generation** — server generates a random message
+3. **User encryption** — user encrypts the challenge with their private key (never transmitted)
+4. **Server verification** — server decrypts the response using the stored public key
+5. **Identity confirmed** — successful decryption proves possession of the private key
 
-## Stack
+Since only the public key ever touches the server, and it's a one-way asymmetric proof, there's nothing sensitive to leak even if the server itself gets compromised.
 
-**Python** + **Streamlit** frontend, **PGPy** for cryptographic operations.
+## Why this over passwords or KYC
 
-[View on GitHub →](https://github.com/sooox-cc/pgp-verification)
+- No personal data collection — no email, no phone, no ID upload
+- Doubles as anti-bot friction: PGP encryption/decryption isn't something a casual bot script does for free
+- Fits naturally as a second factor on top of an existing auth system
+- Useful anywhere anonymity and verified identity both matter: whistleblower platforms, private messaging, crypto wallet access, research platforms
+
+## Implementation
+
+Built with **Streamlit** for the interface and **PGPy** for all cryptographic operations — key parsing, challenge generation, and response verification.
+
+Each challenge is freshly and randomly generated per verification attempt, so a captured challenge-response pair can't be replayed later. Response timing is kept consistent regardless of whether verification succeeds or fails, to avoid leaking anything through timing side-channels.
+
+## Threat model
+
+- **MITM** — mitigated by requiring HTTPS in deployment
+- **Replay attacks** — each challenge is unique and single-use
+- **Timing attacks** — constant-time responses regardless of outcome
+- **Key compromise** — out of scope for the PoC; production use would need rotation/revocation support
+
+## What's next
+
+The PoC covers the core protocol. Natural extensions: hardware security module support for key storage, an API surface for programmatic integration instead of just the Streamlit UI, and multi-signature verification for scenarios needing more than one approving key.

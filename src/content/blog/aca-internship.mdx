@@ -1,0 +1,44 @@
+---
+title: "Data Engineering Internship at ACA Group"
+description: "13 weeks building a CSRD-compliant sustainability data platform for Duvel Moortgat on Microsoft Fabric and dbt."
+date: 2026-02-22
+tags: ["Microsoft Fabric", "dbt", "PySpark", "SQL Server", "Azure DevOps", "Data Engineering"]
+draft: false
+---
+
+I spent 13 weeks (Feb 24 – May 28, 2025) at ACA Group on their "Sustainathon 2025" project, helping Duvel Moortgat build a production-ready platform for CSRD (Corporate Sustainability Reporting Directive) compliance. The groundwork existed as a proof-of-concept; my job was to take it from "works" to "scales and maintains itself."
+
+## The problem
+
+Duvel Moortgat, a major Belgian brewery group, needed to report environmental, social, and governance metrics across 20+ facilities in 8 countries, with full audit trails, to meet EU CSRD requirements. A prior internship team (Kwinten Boes and Thibo Vanderkam, my tech lead) had built a working proof-of-concept the year before — solid work, but rushed after the client got hacked mid-internship and lost systems access for three weeks. I inherited a functional but messy codebase.
+
+I worked the data engineering side; a fellow intern, Fabian Reyes, handled dashboards and reporting on top of what I built.
+
+## Biggest win: killing repetitive code with Jinja templating
+
+The original dbt models manually wrote out a `SELECT` + `UNION ALL` per facility, repeated across every model. The water model alone was 300+ lines of this. I replaced it with dynamic Jinja templating driven by a centralized macro holding location prefixes — the model loops over configured locations instead of hardcoding them.
+
+Result: the water model went from 300+ lines to under 80. Same pattern applied across all 39 Silver-layer models. Adding a new facility went from a ~20-step manual process (editing code in multiple models) to updating two configuration points.
+
+## Performance
+
+- Cut end-to-end pipeline processing time from ~45 minutes to ~20 minutes (55% faster) by adding multithreading to the SharePoint/lakehouse ingestion step and trimming redundant transformation logic.
+
+## Architecture
+
+- Restructured around a medallion architecture: Bronze (raw ingest, Delta Lake), Silver split into Source (cleaning, type/naming normalization) and Enriched (joins, currency conversion, business logic) sub-layers, Gold (fact/dimension tables for Power BI).
+- Stood up separate test and production Fabric workspaces, parameterized so the same pipeline code deploys to either via Azure DevOps — merge to main, run the deploy pipeline, done.
+- Consolidated multiple overlapping fact tables (e.g. four energy-related fact tables into one) to simplify both my own pipeline work and the analysts' dashboard queries downstream.
+
+## Integrations
+
+- SharePoint ingestion of stakeholder-submitted Excel input sheets across facilities, with dynamic extraction of each facility's location code instead of a hardcoded mapping
+- SQL Server integration for water sensor and Navision operational/financial data via secured gateways
+- ClimateCamp exchange for Scope 1/2/3 emissions calculations — formatted exports out, calculated results back in through the same SharePoint pipeline
+- Comprehensive try/catch error handling throughout, aimed at surfacing exactly what broke and where instead of generic failures
+
+## What I learned
+
+Working with Microsoft Fabric while it's still actively developed meant living with preview-feature quirks and outright outages — including one where the platform was down from early morning until 10am. Fabric's caching also fought me: integration notebooks would keep serving stale cached errors even after I'd fixed the underlying issue, until I added explicit file deletion before every re-download to force cache invalidation.
+
+The bigger lesson was about designing for how people actually behave, not how you'd like them to. Stakeholders move data around by hand, leave rows half-filled, drop comments in random cells. Error handling that fails loudly and specifically — rather than silently guessing — turned out to matter more than clever parsing logic. Systems built for human reality, not human ideals, are the ones that hold up.
