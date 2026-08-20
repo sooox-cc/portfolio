@@ -27,17 +27,17 @@ import ProjectCard from '../components/ProjectCard.astro'
             sooox
           </h1>
 
-          <p class="text-lg text-zinc-600 dark:text-zinc-300 mb-2">
-            MSc Cybersecurity student. Privacy advocate. Arch Linux btw.
+          <p class="text-md text-zinc-600 dark:text-zinc-300 mb-2">
+          MSc Cybersecurity graduate  
           </p>
           <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-12 font-mono">
-            cybersecurity &middot; machine learning &middot; full-stack dev &middot; self-hosting
+          cybersecurity &middot; machine learning &middot; full-stack dev &middot; self-hosting &middot; arch linux user
           </p>
 
           <!-- Quick Stats -->
-          <div class="grid grid-cols-3 gap-4 max-w-md mx-auto mb-12">
+          <!-- <div class="grid grid-cols-3 gap-4 max-w-md mx-auto mb-12">
             <div>
-              <div class="text-2xl font-bold text-zinc-900 dark:text-white">13</div>
+              <div class="text-2xl font-bold text-zinc-900 dark:text-white">10+</div>
               <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Languages</p>
             </div>
             <div>
@@ -49,7 +49,7 @@ import ProjectCard from '../components/ProjectCard.astro'
               <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Databases</p>
             </div>
           </div>
-        </div>
+        </div> -->
       </section>
 
       <!-- Current Project -->
@@ -87,7 +87,7 @@ import ProjectCard from '../components/ProjectCard.astro'
       <!-- Skills -->
       <section id="skills" class="mb-20">
         <h2 class="text-3xl font-bold text-zinc-900 dark:text-white mb-2 text-center">Skills & Technologies</h2>
-        <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-12 text-center">Tools I've used and worked with, not a claim of expertise.</p>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-12 text-center">jack of all trades, master of ...some?</p>
 
         <!-- Languages -->
         <div class="mb-8">
@@ -110,7 +110,6 @@ import ProjectCard from '../components/ProjectCard.astro'
               { src: "/icons/html.svg", name: "HTML" },
               { src: "/icons/css.svg", name: "CSS" },
               { src: "/icons/rust.svg", name: "Rust" },
-              { src: "/icons/typescript.svg", name: "TypeScript" },
               { src: "/icons/golang.svg", name: "Go" },
             ].map(({ src, name }) => (
               <div class="p-4 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 text-center flex flex-col items-center gap-2">
@@ -449,32 +448,8 @@ import ProjectCard from '../components/ProjectCard.astro'
             description="Project based learning for Golang."
             tags={["Go", "Learning", "Programming", "Cybersecurity"]}
             blogSlug="learning-golang"
-          />
-          <ProjectCard
-            title="AI-Powered Weed Detection System"
-            description="YOLOv8 pipeline turning drone GeoTIFs into geolocated weed heatmaps."
-            tags={["Python", "YOLOv8", "Computer Vision"]}
-            blogSlug="weed-detection"
-          />
-          <ProjectCard
-            title="AI Game Automation System"
-            description="CNN + computer vision system that plays Trackmania autonomously."
-            tags={["Python", "TensorFlow", "OpenCV"]}
-            blogSlug="ai-game-automation"
-          />
-          <ProjectCard
-            title="PrivacyMatters Blog"
-            description="Privacy-focused blogging platform with PGP-enabled profiles. v1, now retired."
-            tags={["Laravel", "Livewire", "Alpine.js"]}
-            blogSlug="privacymatters"
-          />
-          <ProjectCard
-            title="Linkpen"
-            description="FOSS, self-hosted alternative to Linktree."
-            tags={["Node.js", "Express", "SQLite"]}
-            blogSlug="linkpen"
-          />
-          <ProjectCard
+            />
+         <ProjectCard
             title="Breach Browser"
             description="Full-text search engine for large text datasets, built on Elasticsearch."
             tags={["Python", "Elasticsearch", "Flask"]}
@@ -507,21 +482,6 @@ import ProjectCard from '../components/ProjectCard.astro'
         <h2 class="text-2xl font-bold text-zinc-900 dark:text-white mb-8 text-center">Contact</h2>
 
         <div class="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto">
-          <a
-            href="mailto:sooox@tutamail.com"
-            class="flex-1 flex items-center gap-4 p-5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors group"
-          >
-            <div class="shrink-0 h-9 w-9 flex items-center justify-center rounded-md border border-zinc-200 dark:border-zinc-700 group-hover:border-zinc-400 dark:group-hover:border-zinc-500 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" class="h-4 w-4 text-zinc-500 dark:text-zinc-400">
-                <path d="M0 0h24v24H0z" fill="none" />
-                <path fill="currentColor" d="M4 20q-.825 0-1.412-.587T2 18V6q0-.825.588-1.412T4 4h16q.825 0 1.413.588T22 6v12q0 .825-.587 1.413T20 20zm8-7L4 8v10h16V8zm0-2l8-5H4zM4 8V6v12z" />
-              </svg>
-            </div>
-            <div>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-0.5">Email</p>
-            </div>
-          </a>
-
           <button
             type="button"
             data-session-id="058458993b93f8c9f3e51f4a45f4d3ea14387da27f4b0c5fd62d1b8dab9bb53f69"
