@@ -1,0 +1,82 @@
+---
+import Layout from '../layouts/Layout.astro'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+---
+
+<Layout title="Self-Hosted Services | sooox.cc">
+  <Header />
+
+  <main class="flex-1">
+    <div class="max-w-5xl mx-auto px-6 py-12 lg:py-20">
+
+      <section class="mb-20">
+        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white mb-2 text-center">Self-Hosted Services</h1>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-12 text-center">running on my Proxmox homelab</p>
+
+        <div class="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          {[
+            { name: "Forgejo", desc: "Git hosting", href: "https://git.sooox.cc/", icon: "/icons/forgejo.svg" },
+            { name: "Element", desc: "Matrix client", href: "https://element.privacymatters.cc/", icon: "/icons/element.svg" },
+            { name: "Matrix", desc: "Homeserver", href: "https://matrix.privacymatters.cc/_matrix/static/", icon: "/icons/matrix-light.svg" },
+            { name: "SearXNG", desc: "Metasearch engine", href: "https://searxng.sooox.cc/", icon: "/icons/searxng.svg" },
+            { name: "Kiwix", desc: "Offline content archive", href: "https://kiwix.sooox.cc/#lang=eng", icon: "/icons/kiwix.svg" },
+          ].map(({ name, desc, href, icon }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-4 p-5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 hover:border-zinc-400 dark:hover:border-zinc-500 transition-colors group"
+            >
+              <img src={icon} alt={name} class="h-9 w-9 shrink-0" />
+              <div class="flex-1">
+                <h3 class="font-semibold text-zinc-900 dark:text-white">{name}</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{desc}</p>
+              </div>
+              <svg class="h-4 w-4 text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+              </svg>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section class="mb-20">
+        <h2 class="text-2xl font-bold text-zinc-900 dark:text-white mb-2 text-center">Personal</h2>
+        <p class="text-sm text-zinc-500 dark:text-zinc-400 mb-12 text-center">private, not publicly reachable</p>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
+          {[
+            { name: "Vaultwarden", desc: "Password manager", icon: "/icons/vaultwarden.svg" },
+            { name: "Homarr", desc: "Homelab dashboard", icon: "/icons/homarr.svg" },
+            { name: "Nextcloud", desc: "File sync & storage", icon: "/icons/nextcloud.svg" },
+            { name: "Jellyfin", desc: "Media server", icon: "/icons/jellyfin.svg" },
+            { name: "Immich", desc: "Photo backup & gallery", icon: "/icons/immich.svg" },
+            { name: "Home Assistant", desc: "Home automation", icon: "/icons/home-assistant.svg" },
+            { name: "qBittorrent", desc: "Download client", icon: "/icons/qbittorrent.svg" },
+            { name: "Prowlarr", desc: "Indexer manager", icon: "/icons/prowlarr.svg" },
+            { name: "Sonarr", desc: "TV show automation", icon: "/icons/sonarr.svg" },
+            { name: "Radarr", desc: "Movie automation", icon: "/icons/radarr.svg" },
+            { name: "Lidarr", desc: "Music automation", icon: "/icons/lidarr.svg" },
+            { name: "Seerr", desc: "Media request UI", icon: "/icons/overseerr.svg" },
+            { name: "FlareSolverr", desc: "Cloudflare bypass proxy", icon: "/icons/flaresolverr.svg" },
+          ].map(({ name, desc, icon }) => (
+            <div
+              class="flex items-center gap-4 p-5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/50 cursor-default select-none"
+              title="Private — not publicly reachable"
+            >
+              <img src={icon} alt={name} class="h-9 w-9 shrink-0" />
+              <div class="flex-1">
+                <h3 class="font-semibold text-zinc-900 dark:text-white">{name}</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
