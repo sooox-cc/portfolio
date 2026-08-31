@@ -21,6 +21,8 @@ import Footer from '../components/Footer.astro'
             { name: "Matrix", desc: "Homeserver", href: "https://matrix.privacymatters.cc/_matrix/static/", icon: "/icons/matrix-light.svg" },
             { name: "SearXNG", desc: "Metasearch engine", href: "https://searxng.sooox.cc/", icon: "/icons/searxng.svg" },
             { name: "Kiwix", desc: "Offline content archive", href: "https://kiwix.sooox.cc/#lang=eng", icon: "/icons/kiwix.svg" },
+            { name: "Vaultwarden", desc: "Password manager", href: "https://vaultwarden.sooox.cc/", icon: "/icons/vaultwarden.svg" },
+            { name: "Portfolio", desc: "This site", href: "https://sooox.cc/", icon: "/icons/astro.svg" },
           ].map(({ name, desc, href, icon }) => (
             <a
               href={href}
@@ -47,7 +49,6 @@ import Footer from '../components/Footer.astro'
 
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-3xl mx-auto">
           {[
-            { name: "Vaultwarden", desc: "Password manager", icon: "/icons/vaultwarden.svg" },
             { name: "Homarr", desc: "Homelab dashboard", icon: "/icons/homarr.svg" },
             { name: "Nextcloud", desc: "File sync & storage", icon: "/icons/nextcloud.svg" },
             { name: "Jellyfin", desc: "Media server", icon: "/icons/jellyfin.svg" },
