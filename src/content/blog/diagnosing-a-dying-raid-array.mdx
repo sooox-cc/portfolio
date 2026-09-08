@@ -1,0 +1,108 @@
+---
+title: "Diagnosing a Dying RAID Array (and a Dead Cache Battery)"
+description: "How I tracked down why my homelab server suddenly got slow, and fixed it properly instead of just throwing more drives at it"
+date: 2026-09-08
+tags: ["Homelab", "Proxmox", "RAID", "Storage", "HPE", "Troubleshooting"]
+draft: false
+---
+
+My homelab server suddenly became very slow, my containers would constantly freeze, recover, and then freeze again.
+Heres how I found the issue, and how I fixed it.
+
+## First, ruling things out
+
+I checked the obvious stuff first:
+
+- **CPU/RAM**: idle. 741GB free memory, 0% swap used, CPU mostly idle
+- **A specific container reading/writing a lot**: nope, per-process I/O checks showed nothing unusual.
+
+## Finding the actual problem
+
+`iostat -x` gave me some more insight: `%util` on my main array was near 100%, with write latency (`w_await`) spiking over **2.8 seconds**.
+That's not "slow disks," that's something went very wrong.
+
+Digging into `ssacli` (HPE's Smart Array CLI) and the kernel log turned up two completely separate problems stacked on top of each other:
+
+### Problem 1: a flapping drive
+
+```
+scsi 0:0:2:0: removed  ST5000LM000-2U81 PHYS DRV
+scsi 0:0:2:0: masked   ST5000LM000-2U81 PHYS DRV
+```
+
+One drive in my RAID 1 mirror was dropping off the controller and reconnecting, over and over again, for days.
+Every drop forced the controller to reset the logical volume and re-verify the mirror, slow down I/O to that array significantly while its going.
+That's the freeze-recover-freeze pattern I was seeing.
+
+Worth calling out: both drives in that mirror were `Seagate ST5000LM000 2.5" SMR` (Shingled Magnetic Recording) drives.
+SMR is great for cheap bulk storage, but its actually horrible for RAID.
+
+### Problem 2: the write cache was dead
+
+Separately, `ssacli ctrl slot=0 show detail` had this buried in it:
+
+```
+Cache Status: Permanently Disabled
+Cache Disable Reason: Permanent disable condition. The posted write cache
+has been disabled because there is no backup power source attached to
+the flash-backed write cache module.
+```
+
+Smart Array controllers use a battery (or supercap, depending on generation)
+to make sure that anything sitting in write cache can survive an unexpected power loss.
+
+Mine was dead, so the controller refused to use the write cache at all.
+Every single write went synchronously straight to disk.
+Combined with a constant RAID rebuild because of the flapping drive, this was brutal.
+
+## The fix
+
+- **1x HPE 96W Smart Storage Battery** (~25$), a replacement for the the dead cache battery
+
+### Swapping the battery
+
+Physical swap, out with the old, in with the new.
+
+Ran thee `ssacli` command again:
+
+```
+Cache Status: OK
+Battery/Capacitor Status: OK
+Battery Backed Cache Size: 1.8
+```
+
+(Was `0.0` earlier)
+
+### Building the new array
+
+```bash
+ssacli ctrl slot=0 create type=ld drives=1I:1:1,1I:1:2,1I:1:3 raid=5
+```
+
+- 3 drives in RAID 5: survives 1 drive failure
+
+### Migrating
+
+Proxmox has proper tooling for this:
+
+```bash
+# containers
+pct move-volume <VMID> rootfs raid5-storage --delete 1
+
+# VMs
+qm disk move <VMID> scsi0 raid5-storage --delete 1
+```
+
+### Putting the old drives to work
+
+Once everything was off the old array, I didn't just leave it idle:
+
+- The flapping drive got retired
+- The other, healthy drive from the old mirror got wiped and reformatted as a dedicated backup target
+
+```bash
+pvesh create /cluster/backup --schedule "03:00" --all 1 \
+  --storage Storage --mode snapshot --compress zstd --prune-backups keep-daily=7
+```
+
+- Daily backup with 7 day retention
