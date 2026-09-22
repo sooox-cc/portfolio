@@ -1,0 +1,144 @@
+---
+title: "How im Using Minecraft to Learn CI/CD"
+description: "Every friend group gets the yearly urge to play Minecraft for two weeks. Here's the pipeline I built so updating my server stops being the annoying part."
+date: 2026-09-22
+tags: ["CI/CD", "Forgejo", "Minecraft", "Homelab", "DevOps"]
+draft: false
+---
+
+At least once a year, my friend group suddenly gets the urge to play Minecraft again for about two weeks after which most people get bored/burnt out and quit.
+And every year, that means I have to go dig up the server, update `server.jar`, and then update every single plugin
+that goes with it, one by one, praying none of them broke compatibility since last time.
+
+Considering the fact that I am lazy, this year I did something different: 
+instead of taking 30 minutes to do this manually, I decided to spend multiple hours to build a proper CI/CD pipeline to automate it.
+(I mean... I already host a [forgejo instance](https://git.sooox.cc/).)
+
+## The plugin problem
+
+I run a Paper server with a wide range of "essential" plugins: homes, warps, economy, claims, chat formatting,
+auction house, staff tools, ...
+Every one of those is a separate jar, a separate GitHub repo to check for
+updates, and a separate compatibility risk when Paper bumps its API version.
+From time to time I even built the `jar` locally because there was no prebuilt release on GitHub.
+
+So intead I created an all-in-one plugin, [Mars](https://git.sooox.cc/sooox/mars-mc) (private for now due to spaghetti code, I'd like to clean it up before anyone else has the displeasure of having to look at it). 
+One jar, one thing to update, one `plugin.yml` to keep track of.
+
+This solved the "a dozen plugins" problem. What it didn't solve is the
+"manually rebuild and re-upload a jar every time" problem. 
+That's where I came to use CI/CD workflows.
+
+## The pipeline
+
+I already self-host a Forgejo instance, and [Forgejo Actions](https://forgejo.org/docs/next/user/actions/reference/) 
+provide you the same YAML-based workflow model as GitHub Actions. Here's the loop I ended up with:
+
+1. Develop locally, run `./gradlew test` against the [MockBukkit](https://github.com/MockBukkit/MockBukkit) test suite as I go.
+2. Push to Forgejo. `test.yaml` runs on every push against `main`, so broken commits get caught before getting tagged.
+3. Tag a release (`vX.Y.Z`) once I am actually ready to ship the changes.
+4. `release.yaml` starts on the tag push, builds the plugin against all listed Paper API versions supported
+   (currently only `26.2` and `26.3`), and drafts a Forgejo release with the `mars-<mc_version>-<tag>.jar` files for each of the minecraft versions.
+5. `deploy.yaml` is manual (`workflow_dispatch`), I manually trigger it once I actually want the change live.
+   The action SFTPs into the game panel ([Pelican](https://pelican.dev/)), detects which [Paper](https://papermc.io/) version the server is actually running, 
+   rebuilds the jar for that specific version, and drops it into the plugins directory, replacing whatever pervious version was there.
+   Finally, it restarts the server via the panel API and the new jar is live.
+
+### Testing (`test.yaml`)
+
+```yaml
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: linux-amd64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew test --no-daemon
+```
+
+Nothing fancy, just gate every push on the test suite actually passing.
+
+### Releasing (`release.yaml`)
+
+```yaml
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-and-release:
+    runs-on: linux-amd64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          for paperVersion in 26.2 26.3; do
+            ./gradlew shadowJar --no-daemon -PpaperApiVersion=$paperVersion -Pversion=${{ github.ref_name }}
+          done
+
+      - name: Draft release
+        uses: https://code.forgejo.org/actions/forgejo-release@v2
+        with:
+          direction: upload
+          release-dir: release-dir
+          tag: ${{ github.ref_name }}
+          draft: true
+          token: ${{ secrets.RELEASE_TOKEN }}
+```
+
+A tag push gets me a draft release with jars for every Paper version I care about, with zero manual builds.
+
+### Deploying (`deploy.yaml`)
+
+```yaml
+- name: Detect the server's Paper version
+  run: |
+    VERSION=$(sftp -P "$SFTP_PORT" "$SFTP_USER@$SFTP_HOST" <<< "ls versions" \
+      | grep -Eo '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -n1)
+    echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+- name: Build matching jar
+  run: ./gradlew shadowJar --no-daemon -PpaperApiVersion=${{ steps.detect.outputs.version }} -Pversion=${{ github.ref_name }}
+
+- name: Upload jar and clean up old versions
+  run: |
+    JAR="build/libs/mars-${{ steps.detect.outputs.version }}-${{ github.ref_name }}.jar"
+    sftp -P "$SFTP_PORT" "$SFTP_USER@$SFTP_HOST" <<EOF
+    cd plugins
+    -rm mars-*.jar
+    put $JAR
+    bye
+    EOF
+
+- name: Restart the server
+  run: |
+    curl -sf -X POST "$PANEL_URL/api/client/servers/$SERVER_ID/power" \
+      -H "Authorization: Bearer ${{ secrets.PELICAN_API_KEY }}" \
+      -d '{"signal":"restart"}'
+```
+
+## Why this was worth it for a Minecraft plugin
+
+None of this is complicated CI/CD by professional standards, it's a test job, a build-and-release job, and a
+deploy job. But building it against something low-stakes and self-contained, like a Minecraft server only my
+friends and I touch, turned out to be a genuinely good way to actually internalize the concepts: tagging as a
+release trigger, artifact matrices for multiple target versions, secrets management for deploy credentials, and
+separating "build" from "ship" so a bad build never gets anywhere near production automatically.
+
+Next time we want to start a new Minecraft server, all I need to do is tagging, pushing, and clicking the "build" button in Forgejo.
